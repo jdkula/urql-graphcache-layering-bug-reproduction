@@ -6,7 +6,6 @@
  *  0 -> (no change)
  */
 
-import { devtoolsExchange } from "@urql/devtools";
 import { offlineExchange } from "@urql/exchange-graphcache";
 import type { NextPage } from "next";
 import { FC, useEffect, useState } from "react";
@@ -57,7 +56,6 @@ function createClient() {
   const client = new Client({
     url: "/api/graphql",
     exchanges: [
-      devtoolsExchange,
       dedupExchange,
       offlineExchange({
         storage,
