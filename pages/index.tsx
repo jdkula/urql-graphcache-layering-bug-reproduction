@@ -19,6 +19,7 @@ import {
   useQuery,
 } from "urql";
 import { makeDefaultStorage } from "@urql/exchange-graphcache/default-storage";
+import schema from "../lib/schema";
 
 const VALUE_QUERY = gql`
   query Value {
@@ -58,6 +59,7 @@ function createClient() {
     exchanges: [
       dedupExchange,
       offlineExchange({
+        schema,
         storage,
         optimistic: {
           // Optimistically assume that the value will be set correctly
