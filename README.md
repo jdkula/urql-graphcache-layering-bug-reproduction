@@ -2,10 +2,17 @@ This is a minimal reproduction of a bug(?) in `@urql/exchange-graphcache`,
 where optimistic mutations seem to be incorrectly applied/layered while
 waiting for responses in certain cases.
 
-tl;dr: Identical mutations will update old optimistic layers, even if that
+## tl;dr
+
+Identical mutations will update old optimistic layers, even if that
 data has been changed in more recent optimistic layers. To see what this does,
 run the demo with `yarn install; yarn dev`, go to `http://localhost:3000`,
 then kill the server (so we make use of optimistic/offline).
+
+## Details
+
+- GraphQL Server is at `pages/api/graphql.ts`
+- Demo page is at `pages/index.tsx`
 
 This demo defines a simple keyed graphql schema, which looks like this:
 
