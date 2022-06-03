@@ -1,34 +1,45 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+This is a minimal reproduction of a bug(?) in `@urql/exchange-graphcache`,
+where optimistic mutations seem to be incorrectly applied/layered while
+waiting for responses in certain cases.
 
-## Getting Started
+tl;dr: Identical mutations will update old optimistic layers, even if that
+data has been changed in more recent optimistic layers. To see what this does,
+run the demo with `yarn install; yarn dev`, go to `http://localhost:3000`,
+then kill the server (so we make use of optimistic/offline).
 
-First, run the development server:
+This demo defines a simple keyed graphql schema, which looks like this:
 
-```bash
-npm run dev
-# or
-yarn dev
+```graphql
+type ValueContainer {
+  id: Int!
+  value: Int!
+}
+
+type Query {
+  value: ValueContainer!
+}
+
+type Mutation {
+  setValue(value: Int!): ValueContainer!
+}
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+For the purposes of this demo, there is only one `ValueContainer` with `id: 0`.
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+The demo page reports the value retrieved from the server (and later cache),
+and provides two buttons to set the value to either of 0 or 1. The urql client
+has an offline cache set up, along with an optimistic mutation response for `setValue`
+(which simply sets the value in `ValueContainer:0` to the `value` supplied in
+the mutation's arguments).
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+You can observe the bug by allowing the webpage to load, and then cutting the server
+(so urql makes use of the offline cache).
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+1. Click either button; observe the value changes.
+2. Click the other button; observe the value still changes.
+3. Then, click either button; observe that the value no longer changes (until you are online.)
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+This appears to be happening because graphcache is searching its optimistic layers
+for a mutation with a matching key (hashed from the document and arguments), and updating
+that layer. This behavior seems to be incorrect, however, as the value has since been
+updated by more recent layers, and thus the new mutation's results are being lost.
